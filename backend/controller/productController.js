@@ -1,6 +1,7 @@
 
 import Product from "../Models/ProductModel.js";
 import HandeleError from "../helper/handleError.js";
+import ApiHelper from "../helper/apiHelper.js";
 
 
 // Create Product -- Admin
@@ -52,13 +53,26 @@ export const deleteallproduct = async (req,res)=>{
     });
 };
 
-// Get All Product Details by ID
-export const getallproduct = async (req,res)=>{
-    const products = await Product.find();
-    res.status(200).json({
-        success:true,
-        products
-    });
+// Get All Products with Search
+// http://localhost:8000/api/v1/products?keyword=rice
+export const getallproduct = async (req, res) => {
+    try {
+        const apihelper = new ApiHelper(Product.find(), req.query)
+            .search();
+
+        const products = await apihelper.query;
+
+        res.status(200).json({
+            success: true,
+            count: products.length,
+            products
+        });
+    } catch (err) {
+        res.status(500).json({
+            success: false,
+            message: err.message
+        });
+    }
 };
 
 // Get Single Product Details by ID
