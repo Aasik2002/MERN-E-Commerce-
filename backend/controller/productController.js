@@ -1,5 +1,5 @@
 // ✅ Import Product Model - to interact with MongoDB products collection
-import Product from "../Models/ProductModel.js";
+import Product from "../helper/Models/ProductModel.js";
 
 // ✅ Import Custom Error Handler - to send proper error responses
 import HandeleError from "../helper/handleError.js";

@@ -1,5 +1,6 @@
 import express from "express";
 import product from "./routes/productRoutes.js";
+import user from "./routes/useRout.js";
 import errorHanler from "./middleware/error.js";
 
 const app = express();
