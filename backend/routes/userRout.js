@@ -1,11 +1,10 @@
-import express from 'express';
-import { registerUser, loginUser } from '../controller/userController.js';
-
-// ✅ Removed unused: import e from 'express'
+import express from "express";
+import { registerUser, loginUser } from "../controller/userController.js";
 
 const router = express.Router();
 
-router.route('/register').post(registerUser);
-router.route('/login').post(loginUser);
+// ரூட்கள் சரியாக உள்ளதா என்று பார்
+router.route("/register").post(registerUser);
+router.route("/login").post(loginUser);
 
 export default router;

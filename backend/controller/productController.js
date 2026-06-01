@@ -1,8 +1,9 @@
 // ✅ Import Product Model - to interact with MongoDB products collection
-import Product from "../helper/Models/ProductModel.js";
+import Product from '../Models/ProductModel.js';
 
 // ✅ Import Custom Error Handler - to send proper error responses
 import HandeleError from "../helper/handleError.js";
+
 
 // ✅ Import API Helper - for search, filter, pagination features
 import ApiHelper from "../helper/apiHelper.js";

@@ -1,5 +1,5 @@
 import express from "express";
-import product from "./routes/productRoutes.js";
+import product from "./routes/productroutes.js"; 
 import user from "./routes/userRout.js";
 import errorHanler from "./middleware/error.js";
 
