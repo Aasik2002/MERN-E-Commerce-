@@ -1,4 +1,4 @@
-import mongoose  from "mongoose";
+import mongoose from "mongoose";
 import validator from "validator";
 import bcrypt from "bcryptjs";
 
@@ -20,7 +20,6 @@ const userSchema = new mongoose.Schema({
         required: [true, "Please Enter Your Password"],
         minLength: [8, "Password should have more than 8 characters"],
         select: false
-
     },
     avatar: {
         public_id: {
@@ -38,8 +37,19 @@ const userSchema = new mongoose.Schema({
     },
     resetPasswordToken: String,
     resetPasswordExpire: Date,
-
 },
-{timestamps: true});
+{ timestamps: true });
+
+// ✅ Hash password before saving
+userSchema.pre("save", async function (next) {
+    if (!this.isModified("password")) return next();
+    this.password = await bcrypt.hash(this.password, 10);
+    next();
+});
+
+// ✅ Compare password method (was missing!)
+userSchema.methods.comparePassword = async function (enteredPassword) {
+    return await bcrypt.compare(enteredPassword, this.password);
+};
 
 export default mongoose.model("User", userSchema);

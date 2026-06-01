@@ -1,6 +1,7 @@
 import express from 'express';
-import { registerUser, loginUser } from '../controllers/userController.js';
-import e from 'express';
+import { registerUser, loginUser } from '../controller/userController.js';
+
+// ✅ Removed unused: import e from 'express'
 
 const router = express.Router();
 
