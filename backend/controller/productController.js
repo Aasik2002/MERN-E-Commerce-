@@ -19,6 +19,7 @@ export const addproduct = async (req, res) => {
     try {
         // ✅ Create new product using request body data
         const product = await Product.create(req.body);
+        req.body.user = req.user.id; // ✅ Associate product with logged-in user (admin)
 
         res.status(201).json({
             success: true,

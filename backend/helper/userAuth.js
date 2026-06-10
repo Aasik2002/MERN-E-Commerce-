@@ -16,3 +16,13 @@ export const Verifyuser = async (req, res, next) => {
         return next(new HandeleError("Invalid or expired token.", 401));
     }
 }
+
+//rold based access control
+export const roleBasedAccess = (...roles) => {
+    return (req, res, next) => {
+        if (!roles.includes(req.user.role)) {
+            return next(new HandeleError(`Role ${req.user.role} is not allowed to access this resource`, 403));
+        }
+        next();
+    };
+}

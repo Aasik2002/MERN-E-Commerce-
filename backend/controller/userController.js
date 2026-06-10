@@ -58,3 +58,16 @@ export const loginUser = async (req, res, next) => {
     next(error);
   }
 };
+
+// Logout user
+
+export const logoutUser = (req,res,next) => {
+  const Options = {
+    httpOnly: true,
+    secure: true
+  };
+  res.status(200).cookie("token", null, Options).json({
+    success: true,
+    message: "Logged out successfully"
+  });
+}

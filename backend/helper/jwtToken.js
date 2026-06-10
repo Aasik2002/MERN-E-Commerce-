@@ -12,3 +12,4 @@ export const getToken = (user, statusCode, res, message) => {
     
     res.status(statusCode).cookie("token", token, Options).json(responsePayload);
 };
+
