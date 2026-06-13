@@ -115,108 +115,15 @@ export const updatePassword = async (req, res, next) => {
 
 // Update User Profile
 export const updateProfile = async (req, res, next) => {
-  try {
-    const newUserData = {
-      name: req.body.name,
-      email: req.body.email,
-    };
-
-    // We will add avatar upload later if needed
-
-    const user = await User.findByIdAndUpdate(req.user.id, newUserData, {
-      new: true,
-      runValidators: true,
-      useFindAndModify: false,
-    });
-
-    res.status(200).json({
-      success: true,
-      user,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// Get all users (Admin)
-export const getAllUsers = async (req, res, next) => {
-  try {
-    const users = await User.find();
-
-    res.status(200).json({
-      success: true,
-      users,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// Get single user (Admin)
-export const getSingleUser = async (req, res, next) => {
-  try {
-    const user = await User.findById(req.params.id);
-
-    if (!user) {
-      return res.status(400).json({ success: false, message: `User does not exist with Id: ${req.params.id}` });
-    }
-
-    res.status(200).json({
-      success: true,
-      user,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// Update User Role (Admin)
-export const updateUserRole = async (req, res, next) => {
-  try {
-    const newUserData = {
-      name: req.body.name,
-      email: req.body.email,
-      role: req.body.role,
-    };
-
-    const user = await User.findByIdAndUpdate(req.params.id, newUserData, {
-      new: true,
-      runValidators: true,
-      useFindAndModify: false,
-    });
-
-    if (!user) {
-      return res.status(400).json({ success: false, message: `User does not exist with Id: ${req.params.id}` });
-    }
-
-    res.status(200).json({
-      success: true,
-      message: "Role Updated Successfully",
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// Delete User (Admin)
-export const deleteUser = async (req, res, next) => {
-  try {
-    const user = await User.findById(req.params.id);
-
-    if (!user) {
-      return res.status(400).json({ success: false, message: `User does not exist with Id: ${req.params.id}` });
-    }
-
-    await user.deleteOne();
-
-    res.status(200).json({
-      success: true,
-      message: "User Deleted Successfully",
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+  const { name, email } = req.body;
+  const updateteduserdetails = { name, email };
+  const user = await User.findByIdAndUpdate(req.user.id, updateteduserdetails, {new: true, runValidators: true, useFindAndModify: false});
+  res.status(200).json({
+    success: true,
+    user,
+    message: "Profile Updated Successfully"
+  });
+}
 
 //Forgot Password
 /*
@@ -410,4 +317,90 @@ export const resetPassword = async (req, res, next) => {
     message: "Password reset successfully",
   });
 };
+
+
+// Admin Functionalities
+// Get all users (Admin)
+export const getAllUsers = async (req, res, next) => {
+  try {
+    const users = await User.find();
+
+    res.status(200).json({
+      success: true,
+      users,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get single user (Admin)
+export const getSingleUser = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.id);
+
+    if (!user) {
+      return res.status(400).json({ success: false, message: `User does not exist with Id: ${req.params.id}` });
+    }
+
+    res.status(200).json({
+      success: true,
+      user,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Update User Role (Admin)
+export const updateUserRole = async (req, res, next) => {
+  try {
+    const newUserData = {
+      name: req.body.name,
+      email: req.body.email,
+      role: req.body.role,
+    };
+
+    const user = await User.findByIdAndUpdate(req.params.id, newUserData, {
+      new: true,
+      runValidators: true,
+      useFindAndModify: false,
+    });
+
+    if (!user) {
+      return res.status(400).json({ success: false, message: `User does not exist with Id: ${req.params.id}` });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Role Updated Successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Delete User (Admin)
+export const deleteUser = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.id);
+
+    if (!user) {
+      return res.status(400).json({ success: false, message: `User does not exist with Id: ${req.params.id}` });
+    }
+
+    await user.deleteOne();
+
+    res.status(200).json({
+      success: true,
+      message: "User Deleted Successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+
+
 

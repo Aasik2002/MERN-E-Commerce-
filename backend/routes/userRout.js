@@ -11,7 +11,7 @@ import {
   updateUserRole, 
   deleteUser,
   forgotPassword,
-  resetPassword
+  resetPassword,
 } from "../controller/userController.js";
 import { Verifyuser, roleBasedAccess } from "../helper/userAuth.js";
 
@@ -23,6 +23,8 @@ router.route("/login").post(loginUser);
 router.route("/logout").get(logoutUser);
 router.route("/password/forgot").post(forgotPassword);
 router.route("/password/reset/:token").post(resetPassword);
+router.route("/updateprofile").put(Verifyuser, updateProfile);
+router.route("/updatePassword").put(Verifyuser, updatePassword);
 
 // user profile routes
 router.route("/me").get(Verifyuser, getUserDetails);
