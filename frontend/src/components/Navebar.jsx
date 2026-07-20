@@ -1,9 +1,15 @@
-import { useState } from "react";
-import { Search, ShoppingBag, ShoppingCart, UserPlus, Menu, X } from "lucide-react";
+import { useState, useContext } from "react";
+import { Search, ShoppingBag, ShoppingCart, UserPlus, Menu, X, LogOut, User } from "lucide-react";
 import { Link } from "react-router-dom";
+import { AuthContext } from "../context/AuthContext";
+import { CartContext } from "../context/CartContext";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const { user, logout } = useContext(AuthContext);
+  const { cart } = useContext(CartContext);
+
+  const cartItemCount = cart.reduce((total, item) => total + item.quantity, 0);
 
   return (
     <nav className="sticky top-0 w-full bg-white shadow-sm z-50 border-b border-gray-100">
@@ -49,17 +55,26 @@ const Navbar = () => {
           {/* Floating Badge Cart Element */}
           <Link to="/cart" className="relative text-gray-700 hover:text-blue-600 transition-colors duration-300 p-2">
             <ShoppingCart size={24} />
-            <span className="absolute top-0 right-0 bg-blue-600 text-white text-[10px] font-bold rounded-full h-5 w-5 flex items-center justify-center shadow-sm">
-              6
-            </span>
+            {cartItemCount > 0 && (
+              <span className="absolute top-0 right-0 bg-blue-600 text-white text-[10px] font-bold rounded-full h-5 w-5 flex items-center justify-center shadow-sm">
+                {cartItemCount}
+              </span>
+            )}
           </Link>
 
-          {/* Registration Button (Desktop) */}
-          <Link to="/register" className="hidden sm:inline-flex items-center gap-1.5 bg-blue-600 text-white text-sm font-medium py-2 px-4 rounded-md hover:bg-blue-700 transition-colors duration-300 shadow-sm">
-            <UserPlus size={16} />
-            <span>Register</span>
-          </Link>
-
+          {/* Authentication Actions */}
+          {!user ? (
+            <Link to="/login" className="hidden sm:inline-flex items-center gap-1.5 bg-blue-600 text-white text-sm font-medium py-2 px-4 rounded-md hover:bg-blue-700 transition-colors duration-300 shadow-sm">
+              <UserPlus size={16} />
+              <span>Login</span>
+            </Link>
+          ) : (
+            <button onClick={logout} className="hidden sm:inline-flex items-center gap-1.5 bg-gray-100 text-gray-700 text-sm font-medium py-2 px-4 rounded-md hover:bg-gray-200 transition-colors duration-300 shadow-sm">
+              <LogOut size={16} />
+              <span>Logout</span>
+            </button>
+          )} 
+          
           {/* Mobile Hamburger Menu Toggle Button */}
           <button
             onClick={() => setIsOpen(!isOpen)}
