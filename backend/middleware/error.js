@@ -1,69 +1,92 @@
 // ============================================================
-// Custom Error Class - To handle custom operational errors
+// AppError - Unified Custom Error Class
+// Replaces: HandleError, HandeleError, ErrorResponse
 // ============================================================
-class HandleError extends Error {
-    constructor(message, statusCode) {
-        super(message);
-        this.statusCode = statusCode;
-        
-        // Capture stack trace for debugging
-        Error.captureStackTrace(this, this.constructor);
-    }
+import logger from "../utils/logger.js";
+
+class AppError extends Error {
+  constructor(message, statusCode) {
+    super(message);
+    this.statusCode = statusCode;
+    this.isOperational = true;
+    this.name = "AppError";
+    Error.captureStackTrace(this, this.constructor);
+  }
 }
 
-export { HandleError };
+export { AppError };
+
+// For backward compatibility with existing code
+export default AppError;
 
 // ============================================================
 // Global Error Handling Middleware
 // ============================================================
-export default (err, req, res, next) => {
-    console.error("Error Middleware caught error:", err);
+export const errorHandler = (err, req, res, next) => {
+  // Log the error
+  logger.error(`${err.message}`, {
+    statusCode: err.statusCode || 500,
+    path: req.originalUrl,
+    method: req.method,
+    ip: req.ip,
+    stack: err.stack,
+  });
 
-    let statusCode = err.statusCode || 500;
-    let message = err.message || "Internal Server Error";
+  let statusCode = err.statusCode || 500;
+  let message = err.message || "Internal Server Error";
 
-    // 1. Mongoose duplicate key error (MongoDB unique constraint fail)
-    if (err.code === 11000) {
-        const keyValue = err.keyValue ? JSON.stringify(err.keyValue) : '';
-        message = `Duplicate field value entered: ${keyValue}. Please use another value!`;
-        statusCode = 400;
-    }
+  // 1. Mongoose duplicate key error
+  if (err.code === 11000) {
+    const field = Object.keys(err.keyValue || {})[0];
+    message = `Duplicate value for "${field}". Please use another value.`;
+    statusCode = 400;
+  }
 
-    // 2. Mongoose bad ObjectId (CastError)
-    if (err.name === "CastError") {
-        message = `Resource not found. Invalid: ${err.path}`;
-        statusCode = 404;
-    }
+  // 2. Mongoose bad ObjectId (CastError)
+  if (err.name === "CastError") {
+    message = `Resource not found. Invalid: ${err.path}`;
+    statusCode = 404;
+  }
 
-    // 3. Mongoose Validation Error (Required fields missing)
-    if (err.name === "ValidationError") {
-        message = Object.values(err.errors).map(val => val.message).join(", ");
-        statusCode = 400;
-    }
+  // 3. Mongoose Validation Error
+  if (err.name === "ValidationError") {
+    message = Object.values(err.errors)
+      .map((val) => val.message)
+      .join(", ");
+    statusCode = 400;
+  }
 
-    // 4. Mongoose Duplicate Key Alternative Error name check
-    if (err.code === 11001) {
-        message = "Duplicate key error encountered.";
-        statusCode = 400;
-    }
+  // 4. JWT Invalid Token
+  if (err.name === "JsonWebTokenError") {
+    message = "Invalid authentication token. Please login again.";
+    statusCode = 401;
+  }
 
-    // 5. JWT Invalid Token Error
-    if (err.name === "JsonWebTokenError") {
-        message = "Invalid JSON Web Token. Please try again.";
-        statusCode = 401;
-    }
+  // 5. JWT Expired Token
+  if (err.name === "TokenExpiredError") {
+    message = "Authentication token has expired. Please login again.";
+    statusCode = 401;
+  }
 
-    // 6. JWT Expired Token Error
-    if (err.name === "TokenExpiredError") {
-        message = "JSON Web Token has expired. Please log in again.";
-        statusCode = 401;
-    }
+  // 6. Multer file size error
+  if (err.code === "LIMIT_FILE_SIZE") {
+    message = "File too large. Maximum size is 5MB.";
+    statusCode = 400;
+  }
 
-    // Send secure JSON response back to the client
-    res.status(statusCode).json({
-        success: false,
-        message: message,
-        // Include stack trace only if the app is running in development mode
-        ...(process.env.NODE_ENV === "development" && { stack: err.stack })
-    });
+  // 7. Syntax Error (malformed JSON)
+  if (err instanceof SyntaxError && err.status === 400 && "body" in err) {
+    message = "Invalid JSON in request body.";
+    statusCode = 400;
+  }
+
+  // Send response
+  res.status(statusCode).json({
+    success: false,
+    message,
+    ...(process.env.NODE_ENV === "development" && {
+      error: err.name,
+      stack: err.stack,
+    }),
+  });
 };

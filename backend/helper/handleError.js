@@ -1,10 +1,7 @@
-class HandeleError extends Error{
-    constructor(message,statusCode){
-        super(message);
-        this.statusCode = statusCode;
-        this.name = "HandeleError";
-        Error.captureStackTrace(this,this.constructor);
-    }
-}
+// ============================================================
+// Backward-compatible wrapper — delegates to AppError
+// Existing controllers import HandeleError; this re-exports AppError
+// ============================================================
+import { AppError } from "../middleware/error.js";
 
-export default HandeleError;
+export default AppError;

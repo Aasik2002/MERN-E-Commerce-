@@ -1,13 +1,16 @@
 import mongoose from "mongoose";
+import config from "./index.js";
+import logger from "../utils/logger.js";
 
-const connectDB =  () => {
-    mongoose
-    .connect(process.env.DB_URL)
+const connectDB = () => {
+  mongoose
+    .connect(config.dbUrl)
     .then((data) => {
-        console.log("DB connection successful",data.connection.host);
+      logger.info(`✅ MongoDB connected: ${data.connection.host}`);
     })
     .catch((err) => {
-        console.error("DB connection error:", err);
+      logger.error(`❌ MongoDB connection error: ${err.message}`);
+      process.exit(1);
     });
 };
 
