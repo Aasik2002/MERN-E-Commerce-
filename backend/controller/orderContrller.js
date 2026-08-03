@@ -1,5 +1,6 @@
 import HandeleError from "../helper/handleError.js";
 import Order from "../Models/orderModel.js";
+import Product from "../Models/ProductModel.js"
 
 
 //Create Orders
@@ -113,3 +114,33 @@ export const AdminDeleteOrders= async(req,res,next) => {
         });
     }
 }
+
+// Update Order Status
+export const updateOrderStatus = async (req, res, next) => {
+    try {
+        const order = await Order.findById(req.params.id);
+
+        if (!order) {
+            return next(new HandeleError("Order Not Found", 404));
+        }
+
+        if (req.body.status === "Shipped" && order.orderStatus === "Processing") {
+            order.orderStatus = req.body.status;
+        } else if (req.body.status === "Delivered" && order.orderStatus === "Shipped") {
+            order.orderStatus = req.body.status;
+            order.deliveredAt = Date.now();
+        } else {
+            return next(new HandeleError("Invalid status update", 400));
+        }
+
+        await order.save({ validateBeforeSave: false });
+
+        res.status(200).json({
+            success: true,
+            message: "Order status updated successfully",
+            order
+        });
+    } catch (error) {
+        next(error);
+    }
+};

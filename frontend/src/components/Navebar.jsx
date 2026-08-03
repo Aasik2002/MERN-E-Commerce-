@@ -1,5 +1,5 @@
 import { useState, useContext } from "react";
-import { Search, ShoppingBag, ShoppingCart, UserPlus, Menu, X, LogOut, User } from "lucide-react";
+import { Search, ShoppingBag, ShoppingCart, UserPlus, Menu, X, LogOut } from "lucide-react";
 import { Link } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import { CartContext } from "../context/CartContext";

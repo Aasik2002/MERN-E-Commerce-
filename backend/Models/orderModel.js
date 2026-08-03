@@ -44,7 +44,7 @@ const orderSchema = new mongoose.Schema({
             type:String,
             required:true
         },
-        prodcut:{
+        product:{
             type:mongoose.Schema.ObjectId,
             ref:"Product",
             required:true
