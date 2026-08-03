@@ -1,26 +1,29 @@
-import { useState, useContext } from 'react';
-import { AuthContext } from '../context/AuthContext';
+import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Mail, Lock, ArrowRight, ShoppingBag } from 'lucide-react';
+import { useLoginUserMutation } from '../redux/api/authApi'; // RTK Query hook import செய்தல்
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const { login } = useContext(AuthContext);
+  
+  // RTK Query-ன் login mutation hook-ஐப் பயன்படுத்துதல்
+  const [loginUser, { isLoading }] = useLoginUserMutation();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      setLoading(true);
-      await login(email, password);
-      navigate('/');
+      // API call செய்தல் (Backend-க்கு email மற்றும் password அனுப்புதல்)
+      const result = await loginUser({ email, password }).unwrap();
+      
+      if (result.success) {
+        navigate('/'); // வெற்றிகரமாக லாகின் ஆனதும் Home பேஜுக்குச் செல்லும்
+      }
     } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
+      console.error("Login Failed:", err);
+      // இங்கு நீங்கள் Toast notifications (مثل react-hot-toast) பயன்படுத்திக் கொள்ளலாம்
     }
   };
 
@@ -82,7 +85,7 @@ const Login = () => {
           <div className="space-y-1">
             <div className="flex items-center justify-between">
               <label className="text-xs font-medium uppercase tracking-wider text-slate-400">Password</label>
-              <Link to="/forgot-password" class="text-xs text-blue-400 hover:underline">Forgot?</Link>
+              <Link to="/forgot-password" className="text-xs text-blue-400 hover:underline">Forgot?</Link>
             </div>
             <div className="relative">
               <span className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-500">
@@ -103,10 +106,10 @@ const Login = () => {
           <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} className="pt-2">
             <button
               type="submit"
-              disabled={loading}
+              disabled={isLoading}
               className="w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-950 shadow-lg shadow-blue-600/30 transition-all cursor-pointer disabled:opacity-50"
             >
-              {loading ? (
+              {isLoading ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 <>

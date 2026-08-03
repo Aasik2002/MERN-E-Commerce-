@@ -1,28 +1,29 @@
-import { useState, useContext } from 'react';
-import { AuthContext } from '../context/AuthContext';
+import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { User, Mail, Lock, ArrowRight, ShoppingBag } from 'lucide-react';
+import { useRegisterUserMutation } from '../redux/api/authApi'; // RTK Query hook import 
 
 const Register = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const { login } = useContext(AuthContext);
+  
+  // RTK Query register mutation hook
+  const [registerUser, { isLoading }] = useRegisterUserMutation();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      setLoading(true);
-      // Placeholder registration logic - just logging them in for now
-      await login(email, password); 
-      navigate('/');
+      const result = await registerUser({ name, email, password }).unwrap();
+      
+      if (result.success) {
+        
+        navigate('/verify-email', { state: { email } });
+      }
     } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
+      console.error("Registration Failed:", err);
     }
   };
 
@@ -120,10 +121,10 @@ const Register = () => {
           <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} className="pt-2">
             <button
               type="submit"
-              disabled={loading}
+              disabled={isLoading}
               className="w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-950 shadow-lg shadow-blue-600/30 transition-all cursor-pointer disabled:opacity-50"
             >
-              {loading ? (
+              {isLoading ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 <>

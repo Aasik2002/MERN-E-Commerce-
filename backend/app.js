@@ -123,7 +123,7 @@ app.use("/api/v1", orderRoutes);
 // ============================================================
 // 404 Handler - Catch undefined routes
 // ============================================================
-app.all("*", (req, res) => {
+app.use((req, res) => {
   res.status(404).json({
     success: false,
     message: `Route ${req.originalUrl} not found`,
