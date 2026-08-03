@@ -26,16 +26,31 @@ const userSchema = new mongoose.Schema({
     avatar: {
         public_id: {
             type: String,
-            required: true
+            required: false
         },
         url: {
             type: String,
-            required: true
+            required: false
         }
     },
     role: {
         type: String,
-        default: "user"
+        default: "user",
+        enum: ["user", "admin"]
+    },
+    isActive: {
+        type: Boolean,
+        default: true
+    },
+    emailVerified: {
+        type: Boolean,
+        default: false
+    },
+    emailVerificationOTP: String,
+    emailVerificationExpire: Date,
+    refreshToken: {
+        type: String,
+        select: false
     },
     resetPasswordToken: String,
     resetPasswordExpire: Date,
@@ -48,17 +63,26 @@ userSchema.pre("save", async function () {
     this.password = await bcrypt.hash(this.password, 10);
 });
 
-// ✅ Compare password method (was missing!)
+// ✅ JWT Access Token Generation
 userSchema.methods.getJwtToken = function () {
-    return jwt.sign({ id: this._id }, process.env.JWT_SECRET, {
-        expiresIn: process.env.JWT_EXPIRE,
+    return jwt.sign({ id: this._id, role: this.role }, process.env.JWT_SECRET, {
+        expiresIn: process.env.JWT_EXPIRE || "15m",
     });
 };
 
+// ✅ JWT Refresh Token Generation
+userSchema.methods.getRefreshToken = function () {
+    return jwt.sign({ id: this._id }, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET, {
+        expiresIn: process.env.JWT_REFRESH_EXPIRE || "7d",
+    });
+};
+
+// ✅ Compare password method
 userSchema.methods.comparePassword = async function (enteredPassword) {
     return await bcrypt.compare(enteredPassword, this.password);
 };
 
+// ✅ Generate Password Reset Token
 userSchema.methods.createPasswordResetToken = function () {
     const resetToken = crypto.randomBytes(20).toString("hex");
     
@@ -66,6 +90,16 @@ userSchema.methods.createPasswordResetToken = function () {
     this.resetPasswordExpire = Date.now() + 30 * 60 * 1000; // 30 minutes
     
     return resetToken;
+};
+
+// ✅ Generate Email Verification OTP
+userSchema.methods.createEmailVerificationOTP = function () {
+    const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
+
+    this.emailVerificationOTP = crypto.createHash("sha256").update(otp).digest("hex");
+    this.emailVerificationExpire = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+    return otp;
 };
 
 export default mongoose.model("User", userSchema);

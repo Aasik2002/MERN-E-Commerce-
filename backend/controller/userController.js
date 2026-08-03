@@ -1,79 +1,184 @@
-import User from "../Models/UserModel.js";
+import User from "../Models/userModel.js";
 import { getToken } from "../helper/jwtToken.js";
 import sendEmail from "../helper/sendEmail.js";
-import HandeleError from "../helper/handleError.js";
+import { AppError } from "../middleware/error.js";
 import crypto from "crypto";
+import jwt from "jsonwebtoken";
 
-// Register user
+// Register user with Email Verification OTP
 export const registerUser = async (req, res, next) => {
   try {
     const { name, email, password } = req.body;
 
     if (!name) {
-      return res.status(400).json({ success: false, message: "Please enter your name" });
-
+      return next(new AppError("Please enter your name", 400));
     }
     if (!email) {
-      return res.status(400).json({ success: false, message: "Please enter your email" });
+      return next(new AppError("Please enter your email", 400));
     }
     if (!password) {
-      return res.status(400).json({ success: false, message: "Please enter your password" });
+      return next(new AppError("Please enter your password", 400));
     }
 
-    const userExists = await User.findOne({ email });
-    if (userExists) {
-      return res.status(400).json({ success: false, message: "User already exists with this email" });
+    let user = await User.findOne({ email });
+    if (user) {
+      return next(new AppError("User already exists with this email", 400));
     }
 
-    const user = await User.create({
+    user = await User.create({
       name,
       email,
       password,
-      avatar: { public_id: "temp_id", url: "temp_url" },
     });
 
-    user.password = undefined;
+    // Generate Email Verification OTP
+    const otp = user.createEmailVerificationOTP();
+    await user.save({ validateBeforeSave: false });
 
-    getToken(user, 201, res, "User Registered Successfully");
+    const message = `Your email verification OTP is: ${otp}. It expires in 10 minutes.`;
+    const messageHTML = `
+      <div style="font-family: Arial, sans-serif; padding: 20px;">
+        <h2>Email Verification</h2>
+        <p>Hello ${name},</p>
+        <p>Your OTP for account verification is:</p>
+        <h3 style="background: #2563eb; color: white; padding: 10px 20px; display: inline-block; border-radius: 5px;">${otp}</h3>
+        <p>This OTP is valid for 10 minutes.</p>
+      </div>
+    `;
+
+    try {
+      await sendEmail({
+        email: user.email,
+        subject: "Account Verification OTP",
+        message,
+        messageHTML,
+      });
+
+      res.status(201).json({
+        success: true,
+        message: `OTP sent to ${user.email} successfully. Please verify your email.`,
+      });
+    } catch (error) {
+      user.emailVerificationOTP = undefined;
+      user.emailVerificationExpire = undefined;
+      await user.save({ validateBeforeSave: false });
+
+      return next(new AppError("Could not send verification email. Try again later.", 500));
+    }
   } catch (error) {
     next(error);
   }
 };
 
-// Login user
+// Verify Email using OTP
+export const verifyEmail = async (req, res, next) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return next(new AppError("Please provide email and OTP", 400));
+    }
+
+    const hashedOTP = crypto.createHash("sha256").update(otp).digest("hex");
+
+    const user = await User.findOne({
+      email,
+      emailVerificationOTP: hashedOTP,
+      emailVerificationExpire: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return next(new AppError("Invalid or expired OTP", 400));
+    }
+
+    user.emailVerified = true;
+    user.emailVerificationOTP = undefined;
+    user.emailVerificationExpire = undefined;
+    await user.save();
+
+    getToken(user, 200, res, "Email verified successfully");
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Login user with Refresh Token Support
 export const loginUser = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ success: false, message: "Please enter email and password" });
+      return next(new AppError("Please enter email and password", 400));
     }
 
     const user = await User.findOne({ email }).select("+password");
-    if (!user) return res.status(401).json({ success: false, message: "Invalid email or password" });
+    if (!user) {
+      return next(new AppError("Invalid email or password", 401));
+    }
 
     const isPasswordMatched = await user.comparePassword(password);
-    if (!isPasswordMatched) return res.status(401).json({ success: false, message: "Invalid email or password" });
-    
-    user.password = undefined;
+    if (!isPasswordMatched) {
+      return next(new AppError("Invalid email or password", 401));
+    }
+
+    if (!user.emailVerified) {
+      return next(new AppError("Please verify your email before logging in", 401));
+    }
+
     getToken(user, 200, res, "Login successful");
   } catch (error) {
     next(error);
   }
 };
 
-// Logout user
+// Refresh Access Token
+export const refreshAccessToken = async (req, res, next) => {
+  try {
+    const cookies = req.cookies;
+    if (!cookies?.refreshToken) {
+      return next(new AppError("Refresh Token not found. Please log in again.", 401));
+    }
 
-export const logoutUser = (req,res,next) => {
-  const Options = {
+    const refreshToken = cookies.refreshToken;
+
+    const decoded = jwt.verify(
+      refreshToken, 
+      process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET
+    );
+
+    const user = await User.findById(decoded.id).select("+refreshToken");
+    if (!user || user.refreshToken !== refreshToken) {
+      return next(new AppError("Invalid Refresh Token", 403));
+    }
+
+    // Generate new Access Token
+    const accessToken = user.getJwtToken();
+
+    res.status(200).json({
+      success: true,
+      token: accessToken,
+    });
+  } catch (error) {
+    return next(new AppError("Token is expired or invalid", 403));
+  }
+};
+
+// Logout user (Clearing both tokens/cookies)
+export const logoutUser = (req, res, next) => {
+  const options = {
     httpOnly: true,
-    secure: true
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
   };
-  res.status(200).cookie("token", null, Options).json({
-    success: true,
-    message: "Logged out successfully"
-  });
-}
+
+  res.status(200)
+    .cookie("token", null, { ...options, expires: new Date(Date.now()) })
+    .cookie("refreshToken", null, { ...options, expires: new Date(Date.now()) })
+    .json({
+      success: true,
+      message: "Logged out successfully",
+    });
+};
 
 // Get User Details
 export const getUserDetails = async (req, res, next) => {
@@ -97,11 +202,11 @@ export const updatePassword = async (req, res, next) => {
     const isPasswordMatched = await user.comparePassword(req.body.oldPassword);
 
     if (!isPasswordMatched) {
-      return res.status(400).json({ success: false, message: "Old Password is incorrect" });
+      return next(new AppError("Old Password is incorrect", 400));
     }
 
     if (req.body.newPassword !== req.body.confirmPassword) {
-      return res.status(400).json({ success: false, message: "Password does not match" });
+      return next(new AppError("Password does not match", 400));
     }
 
     user.password = req.body.newPassword;
@@ -115,209 +220,109 @@ export const updatePassword = async (req, res, next) => {
 
 // Update User Profile
 export const updateProfile = async (req, res, next) => {
-  const { name, email } = req.body;
-  const updateteduserdetails = { name, email };
-  const user = await User.findByIdAndUpdate(req.user.id, updateteduserdetails, {new: true, runValidators: true, useFindAndModify: false});
-  res.status(200).json({
-    success: true,
-    user,
-    message: "Profile Updated Successfully"
-  });
-}
-
-//Forgot Password
-/*
-export const forgotPassword = async (req, res, next) => {
-  const { email } = req.body;
-
-  const user = await User.findOne({ email });
-
-  if (!user) {
-    return next(new HandleError("User does not exists", 400));
-  }
-
-  let resetToken;
-
   try {
-    resetToken = user.createPasswordResetToken();
-
-    await user.save();
-
-    console.log(resetToken);
-
-  } catch (error) {
-    console.log(error);
-
-    return next(
-      new HandleError("Could not save reset token, Try again later..", 500)
-    );
-  }
-
-  const resetPasswordURL =
-    `${req.protocol}://${req.host}/reset/${resetToken}`;
-
-  const message =
-    `Reset your password using the link below:\n${resetPasswordURL}\n\nThe link expires in 30 minutes.\n\nIf this was not requested, please ignore this email.`;
-    try{
-    await sendEmail({
-      email: user.email,
-      subject: "Password Reset Request",
-      message,
+    const { name, email } = req.body;
+    const updatedUserData = { name, email };
+    
+    const user = await User.findByIdAndUpdate(req.user.id, updatedUserData, {
+      new: true,
+      runValidators: true,
+      useFindAndModify: false,
     });
+
     res.status(200).json({
       success: true,
-      message: `Email sent to ${user.email} successfully`,
+      user,
+      message: "Profile Updated Successfully",
     });
-    } catch (error) {
-      console.log(error);
-      user.resetPasswordToken = undefined;
-      user.resetPasswordExpire = undefined;
-      await user.save();
-
-      return next(
-        new HandleError("Could not send email, Try again later..", 500)
-      );
-    }
-};
-*/
-
-export const forgotPassword = async (req, res, next) => {
-  const { email } = req.body;
-
-  const user = await User.findOne({ email });
-
-  if (!user) {
-    return next(new HandleError("User does not exists", 400));
-  }
-
-  let resetToken;
-
-  try {
-    resetToken = user.createPasswordResetToken();
-
-    await user.save();
-
-    console.log(resetToken);
-
   } catch (error) {
-    console.log(error);
-
-    return next(
-      new HandleError("Could not save reset token, Try again later..", 500)
-    );
+    next(error);
   }
+};
 
-  const resetPasswordURL =
-    `${req.protocol}://${req.host}/reset/${resetToken}`;
+// Forgot Password
+export const forgotPassword = async (req, res, next) => {
+  try {
+    const { email } = req.body;
 
-  const message =
-    `Reset your password using the link below:\n${resetPasswordURL}\n\nThe link expires in 30 minutes.\n\nIf this was not requested, please ignore this email.`;
-  const messageHTML = `
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return next(new AppError("User does not exist", 400));
+    }
+
+    const resetToken = user.createPasswordResetToken();
+    await user.save({ validateBeforeSave: false });
+
+    const resetPasswordURL = `${req.protocol}://${req.get("host")}/reset/${resetToken}`;
+
+    const message = `Reset your password using the link below:\n${resetPasswordURL}\n\nThe link expires in 30 minutes.`;
+    const messageHTML = `
       <!DOCTYPE html>
       <html>
-      <head>
-        <meta charset="UTF-8">
-      </head>
-      <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px;">
-        <div style="max-width: 600px; margin: auto; background: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-          
-          <div style="background: #2563eb; color: white; padding: 20px; text-align: center;">
-            <h1 style="margin: 0;">Password Reset Request</h1>
-          </div>
-
-          <div style="padding: 30px;">
-            <p>Hello,</p>
-
-            <p>
-              We received a request to reset your password. Click the button below to create a new password.
-            </p>
-
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${resetPasswordURL}"
-                style="background: #2563eb; color: white; text-decoration: none; padding: 12px 24px; border-radius: 5px; display: inline-block;">
-                Reset Password
-              </a>
-            </div>
-
-            <p>
-              If the button doesn't work, copy and paste the following link into your browser:
-            </p>
-
-            <p style="word-break: break-all;">
-              <a href="${resetPasswordURL}">${resetPasswordURL}</a>
-            </p>
-
-            <p>
-              <strong>Note:</strong> This link will expire in 30 minutes.
-            </p>
-
-            <p>
-              If you did not request a password reset, you can safely ignore this email.
-            </p>
-
-            <p>
-              Regards,<br>
-              <strong>Your Application Team</strong>
-            </p>
-          </div>
-
-          <div style="background: #f8f9fa; padding: 15px; text-align: center; color: #666;">
-            © ${new Date().getFullYear()} Your Application. All rights reserved.
-          </div>
-
+      <head><meta charset="UTF-8"></head>
+      <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
+        <div style="max-width: 600px; margin: auto; background: #ffffff; border-radius: 10px; padding: 30px;">
+          <h2>Password Reset Request</h2>
+          <p>Click the button below to reset your password:</p>
+          <a href="${resetPasswordURL}" style="background: #2563eb; color: white; text-decoration: none; padding: 12px 24px; border-radius: 5px; display: inline-block;">Reset Password</a>
+          <p>This link expires in 30 minutes.</p>
         </div>
       </body>
       </html>
-`;
-    try{
+    `;
+
     await sendEmail({
       email: user.email,
       subject: "Password Reset Request",
       message,
-      messageHTML: messageHTML,
+      messageHTML,
     });
+
     res.status(200).json({
       success: true,
       message: `Email sent to ${user.email} successfully`,
     });
-    } catch (error) {
-      console.log(error);
+  } catch (error) {
+    const user = await User.findOne({ email: req.body.email });
+    if (user) {
       user.resetPasswordToken = undefined;
       user.resetPasswordExpire = undefined;
-      await user.save({validateBeforeSave: false});
-
-      return next(
-        new HandleError("Could not send email, Try again later..", 500)
-      );
+      await user.save({ validateBeforeSave: false });
     }
+    return next(new AppError("Could not send email, Try again later..", 500));
+  }
 };
 
-
-//Reset Password
-
+// Reset Password
 export const resetPassword = async (req, res, next) => {
-  const resetPasswordToken = crypto.createHash("sha256").update(req.params.token).digest("hex");
-  const user = await User.findOne({
-    resetPasswordToken,
-    resetPasswordExpire: { $gt: Date.now() },
-  });
-  if (!user) {
-    return next(new HandleError("Reset Password Token is invalid or has expired", 400));
-  }
-  const {password, confirmPassword} = req.body;
-  if(password !== confirmPassword){
-    return next(new HandleError("Password and Confirm Password do not match", 400));
-  }
-  user.password = password;
-  user.resetPasswordToken = undefined;
-  user.resetPasswordExpire = undefined;
-  await user.save();
-  res.status(200).json({
-    success: true,
-    message: "Password reset successfully",
-  });
-};
+  try {
+    const resetPasswordToken = crypto.createHash("sha256").update(req.params.token).digest("hex");
+    
+    const user = await User.findOne({
+      resetPasswordToken,
+      resetPasswordExpire: { $gt: Date.now() },
+    });
 
+    if (!user) {
+      return next(new AppError("Reset Password Token is invalid or has expired", 400));
+    }
+
+    const { password, confirmPassword } = req.body;
+    if (password !== confirmPassword) {
+      return next(new AppError("Password and Confirm Password do not match", 400));
+    }
+
+    user.password = password;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+    await user.save();
+
+    getToken(user, 200, res, "Password reset successfully");
+  } catch (error) {
+    next(error);
+  }
+};
 
 // Admin Functionalities
 // Get all users (Admin)
@@ -340,7 +345,7 @@ export const getSingleUser = async (req, res, next) => {
     const user = await User.findById(req.params.id);
 
     if (!user) {
-      return res.status(400).json({ success: false, message: `User does not exist with Id: ${req.params.id}` });
+      return next(new AppError(`User does not exist with Id: ${req.params.id}`, 400));
     }
 
     res.status(200).json({
@@ -368,7 +373,7 @@ export const updateUserRole = async (req, res, next) => {
     });
 
     if (!user) {
-      return res.status(400).json({ success: false, message: `User does not exist with Id: ${req.params.id}` });
+      return next(new AppError(`User does not exist with Id: ${req.params.id}`, 400));
     }
 
     res.status(200).json({
@@ -386,7 +391,7 @@ export const deleteUser = async (req, res, next) => {
     const user = await User.findById(req.params.id);
 
     if (!user) {
-      return res.status(400).json({ success: false, message: `User does not exist with Id: ${req.params.id}` });
+      return next(new AppError(`User does not exist with Id: ${req.params.id}`, 400));
     }
 
     await user.deleteOne();
@@ -399,8 +404,3 @@ export const deleteUser = async (req, res, next) => {
     next(error);
   }
 };
-
-
-
-
-
