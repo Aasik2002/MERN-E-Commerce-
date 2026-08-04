@@ -8,18 +8,53 @@ import HandeleError from "../helper/handleError.js";
 import ApiHelper from "../helper/apiHelper.js";
 
 // ✅ Import Async Handler - to clean up try-catch blocks and handle async errors
-import asyncHandler from "../utils/asyncHandler.js"; // ⚠️ Update path if your asyncHandler file is inside another folder (e.g. ../helper/asyncHandler.js)
+import asyncHandler from "../utils/asyncHandler.js";
+
+// ✅ Import Cloudinary for image management
+import cloudinary from 'cloudinary';
 
 
 // ============================================================
-// Create Product -- Admin
-// POST http://localhost:8000/api/v1/product/new
+// Create Product -- Admin (with Cloudinary Image Support)
+// POST http://localhost:5000/api/v1/products
 // ============================================================
 export const addproduct = asyncHandler(async (req, res, next) => {
-    // ✅ Associate product with logged-in user (admin)
-    req.body.user = req.user.id; 
+    let images = [];
+    if (typeof req.body.images === "string") {
+        images.push(req.body.images);
+    } else if (Array.isArray(req.body.images)) {
+        images = req.body.images;
+    }
 
-    // ✅ Create new product using request body data
+    const imagesLinks = [];
+    for (let i = 0; i < images.length; i++) {
+        let imagePath = images[i];
+
+        // If image format is an object containing a URL, extract it safely
+        if (typeof imagePath === "object" && imagePath.url) {
+            imagePath = imagePath.url;
+        }
+
+        if (typeof imagePath !== "string") {
+            continue; 
+        }
+
+        const result = await cloudinary.v2.uploader.upload(imagePath, {
+            folder: "products",
+        });
+
+        imagesLinks.push({
+            public_id: result.public_id,
+            url: result.secure_url,
+        });
+    }
+
+    req.body.images = imagesLinks;
+    
+    if (req.user) {
+        req.body.user = req.user.id;
+    }
+
     const product = await Product.create(req.body);
 
     res.status(201).json({
@@ -32,22 +67,58 @@ export const addproduct = asyncHandler(async (req, res, next) => {
 
 // ============================================================
 // Update Product -- Admin
-// PUT http://localhost:8000/api/v1/product/:id
+// PUT http://localhost:5000/api/v1/product/:id
 // ============================================================
 export const updateproduct = asyncHandler(async (req, res, next) => {
     const id = req.params.id;
 
-    // ✅ Find product by ID and update with new data
-    let product = await Product.findByIdAndUpdate(id, req.body, {
-        new: true,              // return updated product
-        runValidators: true,    // run schema validators
-        useFindAndModify: false, // use native findOneAndUpdate()
-    });
-
-    // ✅ If product not found, send 404 error via custom handler
+    let product = await Product.findById(id);
     if (!product) {
         return next(new HandeleError("Product Not Found", 404));
     }
+
+    // ✅ Handle Image Update if new images are provided safely
+    let images = [];
+    if (req.body.images) {
+        if (typeof req.body.images === "string") {
+            images.push(req.body.images);
+        } else if (Array.isArray(req.body.images)) {
+            images = req.body.images;
+        }
+
+        if (images.length > 0) {
+            // If new images are sent, delete old images from Cloudinary
+            for (let i = 0; i < product.images.length; i++) {
+                if (product.images[i].public_id) {
+                    await cloudinary.v2.uploader.destroy(product.images[i].public_id);
+                }
+            }
+
+            const imagesLinks = [];
+            for (let i = 0; i < images.length; i++) {
+                let imagePath = images[i];
+                if (typeof imagePath === "object" && imagePath.url) {
+                    imagePath = imagePath.url;
+                }
+                if (typeof imagePath !== "string") continue;
+
+                const result = await cloudinary.v2.uploader.upload(imagePath, {
+                    folder: "products",
+                });
+                imagesLinks.push({
+                    public_id: result.public_id,
+                    url: result.secure_url,
+                });
+            }
+            req.body.images = imagesLinks;
+        }
+    }
+
+    // ✅ Find product by ID and update with new data
+    product = await Product.findByIdAndUpdate(id, req.body, {
+        new: true,              // return updated product
+        runValidators: true,    // run schema validators
+    });
 
     return res.status(200).json({
         success: true,
@@ -57,19 +128,26 @@ export const updateproduct = asyncHandler(async (req, res, next) => {
 
 
 // ============================================================
-// Delete Single Product -- Admin
-// DELETE http://localhost:8000/api/v1/product/:id
+// Delete Single Product -- Admin (with Cloudinary image cleanup)
+// DELETE http://localhost:5000/api/v1/product/:id
 // ============================================================
 export const deleteproduct = asyncHandler(async (req, res, next) => {
     const id = req.params.id;
 
-    // ✅ Find product by ID and delete it
-    let product = await Product.findByIdAndDelete(id);
-
-    // ✅ If product not found, send 404 error
+    let product = await Product.findById(id);
     if (!product) {
         return next(new HandeleError("Product Not Found", 404));
     }
+
+    // ✅ Deleting images from Cloudinary
+    for (let i = 0; i < product.images.length; i++) {
+        if (product.images[i].public_id) {
+            await cloudinary.v2.uploader.destroy(product.images[i].public_id);
+        }
+    }
+
+    // ✅ Delete product from DB
+    await product.deleteOne();
 
     return res.status(200).json({
         success: true,
@@ -80,9 +158,20 @@ export const deleteproduct = asyncHandler(async (req, res, next) => {
 
 // ============================================================
 // Delete All Products -- Admin
-// DELETE http://localhost:8000/api/v1/products/all
+// DELETE http://localhost:5000/api/v1/products
 // ============================================================
 export const deleteallproduct = asyncHandler(async (req, res, next) => {
+    const products = await Product.find();
+
+    // Delete all images from Cloudinary
+    for (let product of products) {
+        for (let i = 0; i < product.images.length; i++) {
+            if (product.images[i].public_id) {
+                await cloudinary.v2.uploader.destroy(product.images[i].public_id);
+            }
+        }
+    }
+
     // ✅ Delete all products from DB
     await Product.deleteMany();
 
@@ -95,13 +184,13 @@ export const deleteallproduct = asyncHandler(async (req, res, next) => {
 
 // ============================================================
 // Get All Products with Search, Filter, Pagination
-// GET http://localhost:8000/api/v1/products?keyword=rice&page=1
+// GET http://localhost:5000/api/v1/products
 // ============================================================
 export const getallproduct = asyncHandler(async (req, res, next) => {
     const resultsPerPage = 4; // ✅ Show 4 products per page
 
     // ✅ Step 1 - Apply search and filter
-    const apihelper = new ApiHelper(Product.find(), req.query)
+    const apihelper = new ApiHelper(Product.find().populate('category', 'name'), req.query)
         .search()
         .filter();
 
@@ -129,8 +218,8 @@ export const getallproduct = asyncHandler(async (req, res, next) => {
     // ✅ Step 8 - Send response
     res.status(200).json({
         success: true,
-        productCount,    // total products in DB after filter
-        totalPages,      // total number of pages
+        productCount,       // total products in DB after filter
+        totalPages,        // total number of pages
         resultsPerPage,  // products shown per page
         currentPage: page, // current page number
         products         // products for current page
@@ -140,11 +229,11 @@ export const getallproduct = asyncHandler(async (req, res, next) => {
 
 // ============================================================
 // Get Single Product by ID
-// GET http://localhost:8000/api/v1/product/:id
+// GET http://localhost:5000/api/v1/product/:id
 // ============================================================
 export const getsingleproduct = asyncHandler(async (req, res, next) => {
-    // ✅ Find product by ID from URL params
-    const product = await Product.findById(req.params.id);
+    // ✅ Find product by ID from URL params and populate category
+    const product = await Product.findById(req.params.id).populate('category', 'name description');
 
     // ✅ If product not found, send 404 error
     if (!product) {
@@ -237,7 +326,7 @@ export const viweproductreview = asyncHandler(async (req, res, next) => {
 // Admin View All Products
 // ============================================================
 export const getAllProductByAdmin = asyncHandler(async (req, res, next) => {
-    const Products = await Product.find();
+    const Products = await Product.find().populate('category', 'name');
     
     res.status(200).json({
         success: true,

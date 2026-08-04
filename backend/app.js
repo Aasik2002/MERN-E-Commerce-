@@ -11,10 +11,12 @@ import config from "./config/index.js";
 import logger from "./utils/logger.js";
 import { errorHandler } from "./middleware/error.js";
 
-// Route imports
-import productRoutes from "./routes/productroutes.js";
+// Route imports 
+import productRoutes from "./routes/productRoute.js"; 
 import userRoutes from "./routes/userRout.js";
 import orderRoutes from "./routes/orderRoute.js";
+
+import categoryRoutes from "./routes/categoryRoute.js";
 
 const app = express();
 
@@ -119,6 +121,7 @@ app.get("/api/health", (req, res) => {
 app.use("/api/v1", productRoutes);
 app.use("/api/v1", userRoutes);
 app.use("/api/v1", orderRoutes);
+app.use("/api/v1", categoryRoutes);
 
 // ============================================================
 // 404 Handler - Catch undefined routes

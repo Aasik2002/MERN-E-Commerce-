@@ -4,21 +4,29 @@
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
+import cloudinary from "cloudinary";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load env from root .env
-dotenv.config({ path: path.join(__dirname, "../../.env") });
+// Load env from config.env (since both are in the same 'config' folder)
+dotenv.config({ path: path.join(__dirname, "./config.env") });
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+  secure: true,
+});
 
 const config = {
   // Server
-  port: parseInt(process.env.PORT, 10) || 8000,
+  port: parseInt(process.env.PORT, 10) || 5000,
   nodeEnv: process.env.NODE_ENV || "development",
   isDev: process.env.NODE_ENV !== "production",
 
-  // Database
-  dbUrl: process.env.DB_URL || "mongodb://127.0.0.1:27017/ecommerce",
+  // Database (Matched with DB_URI from your config.env)
+  dbUrl: process.env.DB_URI || "mongodb://127.0.0.1:27017/ecommerce",
 
   // JWT
   jwt: {
