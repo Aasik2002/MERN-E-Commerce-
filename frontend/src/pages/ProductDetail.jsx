@@ -1,148 +1,84 @@
-import { useParams, Link } from 'react-router-dom';
-import { useContext, useState } from 'react';
-import { CartContext } from '../context/CartContext';
-import { motion } from 'framer-motion';
-import { ArrowLeft, ShoppingBag, ShieldCheck, Truck, RotateCcw, Plus, Minus, Star } from 'lucide-react';
-
-const DUMMY_PRODUCTS = [
-  { _id: '1', name: 'Premium Wireless Headphones', price: 299, image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=80', description: 'High-quality wireless headphones with active noise cancellation, studio-grade acoustics, and 30-hour battery life.', rating: 4.8 },
-  { _id: '2', name: 'Mechanical Keyboard', price: 149, image: 'https://images.unsplash.com/photo-1595225476474-87563907a212?auto=format&fit=crop&w=800&q=80', description: 'Tactile mechanical keyboard designed for professional developers, gamers, and seamless typists with customizable RGB backlighting.', rating: 4.6 },
-  { _id: '3', name: 'Gaming Mouse', price: 79, image: 'https://images.unsplash.com/photo-1527814050087-379381547969?auto=format&fit=crop&w=800&q=80', description: 'Ergonomic high-precision gaming mouse with ultra-low latency, customizable side buttons, and a 16000 DPI optical sensor.', rating: 4.9 },
-  { _id: '4', name: '4K Ultra Monitor', price: 499, image: 'https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?auto=format&fit=crop&w=800&q=80', description: 'Crisp, crystal clear 4K UHD monitor built for immersive content creation, high-end design workflows, and elite PC gaming.', rating: 4.7 },
-];
+import { useState } from 'react';
+import { ShoppingCart, Heart, Activity, Battery } from 'lucide-react';
 
 const ProductDetail = () => {
-  const { id } = useParams();
-  const { addToCart } = useContext(CartContext);
   const [quantity, setQuantity] = useState(1);
-  const [added, setAdded] = useState(false);
-  
-  const product = DUMMY_PRODUCTS.find(p => p._id === id);
-
-  if (!product) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white space-y-4">
-        <h2 className="text-3xl font-bold">Product Not Found</h2>
-        <Link to="/products" className="px-6 py-2.5 rounded-xl bg-blue-600 text-white font-semibold shadow-lg shadow-blue-600/30 hover:bg-blue-500 transition-all">
-          Back to Catalog
-        </Link>
-      </div>
-    );
-  }
-
-  const handleAddToCart = () => {
-    // Add product with selected quantity logic if supported by context, otherwise call normal add
-    for (let i = 0; i < quantity; i++) {
-      addToCart(product);
-    }
-    setAdded(true);
-    setTimeout(() => setAdded(false), 2000);
-  };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-      {/* 🌟 Background Glow Elements */}
-      <div className="absolute top-20 left-10 w-96 h-96 bg-blue-600/10 rounded-full blur-[140px] pointer-events-none" />
-      <div className="absolute bottom-10 right-10 w-96 h-96 bg-indigo-600/10 rounded-full blur-[140px] pointer-events-none" />
-
-      <div className="max-w-6xl mx-auto space-y-8 relative z-10">
-        {/* Back Link */}
-        <Link 
-          to="/products" 
-          className="inline-flex items-center gap-2 text-sm font-semibold text-blue-400 hover:text-blue-300 transition-colors bg-slate-900/80 px-4 py-2 rounded-xl border border-slate-800 shadow-inner w-fit"
-        >
-          <ArrowLeft size={16} /> Back to Products
-        </Link>
-
-        {/* Main Product Container */}
-        <div className="grid md:grid-cols-2 gap-12 items-center bg-slate-900/80 backdrop-blur-xl border border-slate-800 p-6 sm:p-10 rounded-3xl shadow-2xl shadow-black/50">
-          
-          {/* Left: Product Image */}
-          <motion.div 
-            initial={{ opacity: 0, x: -30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6 }}
-            className="relative rounded-2xl overflow-hidden border border-slate-800 bg-slate-950 shadow-inner group"
-          >
+    <div className="min-h-screen bg-[#060913] text-slate-200 pt-24 pb-16 px-4 sm:px-6 lg:px-8 font-sans">
+      <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 lg:gap-16">
+        
+        {/* Left - Images */}
+        <div className="space-y-4">
+          <div className="bg-[#0b1021]/80 border border-slate-800/80 rounded-2xl overflow-hidden aspect-[4/3] flex items-center justify-center p-8 relative">
             <img 
-              src={product.image} 
-              alt={product.name} 
-              className="w-full h-80 sm:h-[420px] object-cover transition-transform duration-500 group-hover:scale-105" 
+              src="https://images.unsplash.com/photo-1595225476474-87563907a212?auto=format&fit=crop&w=1000&q=80" 
+              alt="OmniType Pro X Keyboard" 
+              className="w-full object-contain filter drop-shadow-[0_0_30px_rgba(59,130,246,0.3)]"
             />
-          </motion.div>
+          </div>
+          <div className="flex gap-4">
+            <button className="w-24 h-24 rounded-xl bg-[#0b1021] border-2 border-blue-500 overflow-hidden"><img src="https://images.unsplash.com/photo-1595225476474-87563907a212?auto=format&fit=crop&w=200&q=80" alt="Thumb 1" className="w-full h-full object-cover opacity-100" /></button>
+            <button className="w-24 h-24 rounded-xl bg-[#0b1021] border border-slate-800 overflow-hidden opacity-60 hover:opacity-100 transition-opacity"><img src="https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?auto=format&fit=crop&w=200&q=80" alt="Thumb 2" className="w-full h-full object-cover" /></button>
+            <button className="w-24 h-24 rounded-xl bg-[#0b1021] border border-slate-800 overflow-hidden opacity-60 hover:opacity-100 transition-opacity"><img src="https://images.unsplash.com/photo-1555680202-c86f0e12f086?auto=format&fit=crop&w=200&q=80" alt="Thumb 3" className="w-full h-full object-cover" /></button>
+          </div>
+        </div>
+
+        {/* Right - Info */}
+        <div className="flex flex-col justify-center">
+          <div className="flex items-center gap-3 mb-4">
+            <span className="bg-slate-800 text-slate-300 text-[10px] px-2 py-1 rounded font-bold tracking-widest">NEW RELEASE</span>
+            <span className="flex items-center gap-1.5 text-[11px] text-blue-400 font-semibold tracking-wider">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span> IN STOCK
+            </span>
+          </div>
+
+          <h1 className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight mb-3">OmniType Pro X</h1>
           
-          {/* Right: Product Info & Actions */}
-          <motion.div 
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6 }}
-            className="flex flex-col justify-center space-y-6"
-          >
-            <div className="space-y-2">
-              <div className="flex items-center gap-1.5 text-amber-400 text-xs font-semibold">
-                <Star size={14} fill="currentColor" />
-                <span>{product.rating} / 5.0 Rating</span>
-              </div>
-              <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">{product.name}</h1>
-              <p className="text-3xl font-extrabold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
-                ${product.price}.00
-              </p>
-            </div>
+          <div className="flex items-center gap-2 mb-6">
+            <div className="flex text-blue-500 text-sm">★★★★★</div>
+            <span className="text-sm text-slate-500">(128 Reviews)</span>
+          </div>
 
-            <p className="text-slate-400 text-sm sm:text-base leading-relaxed">
-              {product.description}
-            </p>
+          <p className="text-3xl font-bold text-white mb-6">$249.99</p>
 
-            {/* Quantity Selector */}
-            <div className="flex items-center gap-4 pt-2">
-              <span className="text-xs font-medium uppercase tracking-wider text-slate-400">Quantity</span>
-              <div className="flex items-center border border-slate-800 rounded-xl bg-slate-950 p-1 shadow-inner">
-                <button 
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="p-2 text-slate-400 hover:text-white transition-colors"
-                >
-                  <Minus size={16} />
-                </button>
-                <span className="w-10 text-center font-semibold text-white text-sm">{quantity}</span>
-                <button 
-                  onClick={() => setQuantity(quantity + 1)}
-                  className="p-2 text-slate-400 hover:text-white transition-colors"
-                >
-                  <Plus size={16} />
-                </button>
+          <p className="text-sm text-slate-400 leading-relaxed mb-8">
+            Engineered for absolute precision, the OmniType Pro X combines aerospace-grade aluminum with our custom tactile switches for an unparalleled typing experience in a stealth, low-profile chassis.
+          </p>
+
+          {/* Actions */}
+          <div className="space-y-6 mb-10">
+            <div className="flex items-center gap-4">
+              <span className="text-xs font-semibold text-slate-400 tracking-wider">QUANTITY</span>
+              <div className="flex items-center bg-[#0b1021] border border-slate-800 rounded-lg overflow-hidden">
+                <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="px-4 py-2 text-slate-400 hover:text-white transition-colors">-</button>
+                <span className="w-8 text-center text-sm font-semibold">{quantity}</span>
+                <button onClick={() => setQuantity(quantity + 1)} className="px-4 py-2 text-slate-400 hover:text-white transition-colors">+</button>
               </div>
             </div>
 
-            {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 pt-4">
-              <motion.button 
-                whileHover={{ scale: 1.01 }} 
-                whileTap={{ scale: 0.98 }}
-                onClick={handleAddToCart}
-                className="flex-1 flex items-center justify-center gap-2 py-4 px-6 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-lg shadow-blue-600/30 transition-all cursor-pointer"
-              >
-                <ShoppingBag size={18} />
-                {added ? "Added to Cart! ✓" : "Add to Cart"}
-              </motion.button>
+            <div className="flex gap-4">
+              <button className="flex-1 flex items-center justify-center gap-2 py-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold transition-all shadow-lg shadow-blue-600/20">
+                <ShoppingCart size={18} /> Add to Cart
+              </button>
+              <button className="w-14 h-14 flex items-center justify-center rounded-xl border border-slate-700 text-slate-400 hover:text-pink-500 hover:border-pink-500/50 transition-colors bg-[#0b1021]">
+                <Heart size={20} />
+              </button>
             </div>
+          </div>
 
-            {/* Trust Badges */}
-            <div className="grid grid-cols-3 gap-4 pt-6 border-t border-slate-800/80 text-center">
-              <div className="flex flex-col items-center space-y-1">
-                <Truck className="text-blue-400" size={20} />
-                <span className="text-[11px] text-slate-400">Fast Delivery</span>
-              </div>
-              <div className="flex flex-col items-center space-y-1">
-                <ShieldCheck className="text-blue-400" size={20} />
-                <span className="text-[11px] text-slate-400">Secure Warranty</span>
-              </div>
-              <div className="flex flex-col items-center space-y-1">
-                <RotateCcw className="text-blue-400" size={20} />
-                <span className="text-[11px] text-slate-400">Easy Returns</span>
-              </div>
+          {/* Features */}
+          <div className="grid grid-cols-2 gap-4 pt-6 border-t border-slate-800/80">
+            <div className="bg-[#0b1021]/50 border border-slate-800 p-4 rounded-xl">
+              <Activity className="text-blue-400 mb-2 w-5 h-5" />
+              <p className="text-xs text-slate-300">0.1ms Latency</p>
             </div>
+            <div className="bg-[#0b1021]/50 border border-slate-800 p-4 rounded-xl">
+              <Battery className="text-blue-400 mb-2 w-5 h-5" />
+              <p className="text-xs text-slate-300">200h Battery Life</p>
+            </div>
+          </div>
 
-          </motion.div>
         </div>
       </div>
     </div>

@@ -2,13 +2,15 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
 export const authApi = createApi({
   reducerPath: 'authApi',
+  // Configure the base URL for all authentication API requests
   baseQuery: fetchBaseQuery({ 
     baseUrl: 'http://localhost:8000/api/v1', 
-    credentials: 'include' 
+    credentials: 'include' // Ensures cookies/tokens are sent with requests
   }),
-  tagTypes: ['User'],
+  tagTypes: ['User'], // Used for automated caching and refetching
   endpoints: (builder) => ({
-    // Register User
+    
+    // 1. Register a new user
     registerUser: builder.mutation({
       query: (userData) => ({
         url: '/register',
@@ -17,7 +19,7 @@ export const authApi = createApi({
       }),
     }),
 
-    // Verify Email OTP
+    // 2. Verify user email using OTP
     verifyEmail: builder.mutation({
       query: (otpData) => ({
         url: '/verify-email',
@@ -26,33 +28,45 @@ export const authApi = createApi({
       }),
     }),
 
-    // Login User
+    // 3. Authenticate and login user
     loginUser: builder.mutation({
       query: (credentials) => ({
         url: '/login',
         method: 'POST',
         body: credentials,
       }),
-      invalidatesTags: ['User'],
+      // Invalidate cache to fetch fresh user data upon successful login
+      invalidatesTags: ['User'], 
     }),
 
-    // Get Current User Profile
+    // 🌟 4. Initiate forgot password recovery process (NEWLY ADDED)
+    forgotPassword: builder.mutation({
+      query: (emailData) => ({
+        url: '/password/forgot',
+        method: 'POST',
+        body: emailData, // Sends { email: "user@example.com" } to the backend
+      }),
+    }),
+
+    // 5. Fetch current authenticated user's profile
     getProfile: builder.query({
       query: () => '/me',
-      providesTags: ['User'],
+      providesTags: ['User'], // Provide cache tag for user data
     }),
 
-    // Logout User
+    // 6. Logout the current user and clear session
     logoutUser: builder.query({
       query: () => '/logout',
     }),
   }),
 });
 
+// Export all auto-generated React hooks for components to use
 export const { 
   useRegisterUserMutation, 
   useVerifyEmailMutation, 
   useLoginUserMutation, 
+  useForgotPasswordMutation, // 🌟 Exporting the newly added hook
   useGetProfileQuery,
   useLazyLogoutUserQuery 
 } = authApi;
