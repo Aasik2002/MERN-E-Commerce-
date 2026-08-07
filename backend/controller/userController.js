@@ -1,9 +1,10 @@
 import User from "../Models/userModel.js";
 import { getToken } from "../helper/jwtToken.js";
-import sendEmail from "../utils/sendEmail.js";
+import sendEmail from "../helper/sendEmail.js";
 import { AppError } from "../middleware/error.js";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
+import cloudinary from "cloudinary";
 
 // Register user with Email Verification OTP
 export const registerUser = async (req, res, next) => {
@@ -184,7 +185,22 @@ export const logoutUser = (req, res, next) => {
 // Get User Details
 export const getUserDetails = async (req, res, next) => {
   try {
+    // 🌟 Check if user is authenticated via middleware
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Please login to access this resource",
+      });
+    }
+
     const user = await User.findById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
 
     res.status(200).json({
       success: true,
@@ -222,10 +238,37 @@ export const updatePassword = async (req, res, next) => {
 // Update User Profile
 export const updateProfile = async (req, res, next) => {
   try {
-    const { name, email } = req.body;
-    const updatedUserData = { name, email };
-    
-    const user = await User.findByIdAndUpdate(req.user.id, updatedUserData, {
+    const newUserData = {
+      name: req.body.name,
+    };
+
+    // Check if an avatar image file is uploaded via Multer
+    if (req.file) {
+      const user = await User.findById(req.user.id);
+
+      // Delete old image from Cloudinary if it exists
+      if (user.avatar && user.avatar.public_id) {
+        await cloudinary.v2.uploader.destroy(user.avatar.public_id);
+      }
+
+      // Convert buffer to base64 data URI for Cloudinary upload
+      const fileBuffer = req.file.buffer;
+      const fileUri = `data:${req.file.mimetype};base64,${fileBuffer.toString("base64")}`;
+
+      // Upload new image to Cloudinary
+      const myCloud = await cloudinary.v2.uploader.upload(fileUri, {
+        folder: "avatars",
+        width: 150,
+        crop: "scale",
+      });
+
+      newUserData.avatar = {
+        public_id: myCloud.public_id,
+        url: myCloud.secure_url,
+      };
+    }
+
+    const user = await User.findByIdAndUpdate(req.user.id, newUserData, {
       new: true,
       runValidators: true,
       useFindAndModify: false,
@@ -233,8 +276,8 @@ export const updateProfile = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      user,
       message: "Profile Updated Successfully",
+      user,
     });
   } catch (error) {
     next(error);

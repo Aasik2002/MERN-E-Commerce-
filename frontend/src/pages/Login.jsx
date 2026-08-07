@@ -3,12 +3,13 @@ import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Mail, Lock, ArrowRight, Cpu } from 'lucide-react';
 import { useLoginUserMutation } from '../redux/api/authApi'; 
+import toast from 'react-hot-toast'; // 🌟 Added Toast for professional notifications
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   
-  // RTK Query Hook (No changes here)
+  // RTK Query Hook
   const [loginUser, { isLoading }] = useLoginUserMutation();
   const navigate = useNavigate();
 
@@ -18,11 +19,17 @@ const Login = () => {
       const result = await loginUser({ email, password }).unwrap();
       
       if (result.success) {
+        toast.success('Authentication Successful!', {
+          style: { background: '#0b1021', color: '#fff', border: '1px solid #1e293b' },
+        });
         navigate('/'); 
       }
     } catch (err) {
       console.error("Login Failed:", err);
-      // Optional: Add toast notification here
+      // 🌟 Display backend error message if available
+      toast.error(err?.data?.message || 'Authentication failed. Please check your credentials.', {
+        style: { background: '#0b1021', color: '#fff', border: '1px solid #1e293b' },
+      });
     }
   };
 

@@ -13,6 +13,7 @@ import Cart from "./pages/Cart";
 import Navbar from "./components/Navebar"; 
 import Footer from "./components/Footer";
 import { CartProvider } from "./context/CartContext";
+import Profile from './pages/Profile';
 
 const App = () => {
   return (
@@ -34,6 +35,7 @@ const App = () => {
               <Route path="/products" element={<Products />} />
               <Route path="/product/:id" element={<ProductDetail />} />
               <Route path="/cart" element={<Cart />} />
+              <Route path="/profile" element={<Profile />} />
             </Routes>
           </main>
           <Footer />

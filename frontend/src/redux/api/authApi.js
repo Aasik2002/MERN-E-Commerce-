@@ -2,15 +2,14 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
 export const authApi = createApi({
   reducerPath: 'authApi',
-  // Configure the base URL for all authentication API requests
   baseQuery: fetchBaseQuery({ 
-    baseUrl: 'http://localhost:5000/api/v1', 
-    credentials: 'include' // Ensures cookies/tokens are sent with requests
+    baseUrl: 'http://localhost:5000/api/v1', // Backend API base URL
+    credentials: 'include' // Required for sending cookies / tokens automatically
   }),
-  tagTypes: ['User'], // Used for automated caching and refetching
+  tagTypes: ['User'],
   endpoints: (builder) => ({
     
-    // 1. Register a new user
+    // 1. Register User
     registerUser: builder.mutation({
       query: (userData) => ({
         url: '/register',
@@ -19,67 +18,78 @@ export const authApi = createApi({
       }),
     }),
 
-    // 2. Verify user email using OTP
-    verifyEmail: builder.mutation({
-      query: (otpData) => ({
-        url: '/verify-email',
-        method: 'POST',
-        body: otpData,
-      }),
-    }),
-
-    // 3. Authenticate and login user
+    // 2. Login User
     loginUser: builder.mutation({
       query: (credentials) => ({
         url: '/login',
         method: 'POST',
         body: credentials,
       }),
-      // Invalidate cache to fetch fresh user data upon successful login
-      invalidatesTags: ['User'], 
+      invalidatesTags: ['User'],
     }),
 
-    // 4. Initiate forgot password recovery process
-    forgotPassword: builder.mutation({
-      query: (emailData) => ({
-        url: '/password/forgot',
+    // 3. Verify Email OTP
+    verifyEmail: builder.mutation({
+      query: (data) => ({
+        url: '/verify-email',
         method: 'POST',
-        body: emailData,
+        body: data,
       }),
     }),
 
-    // 5. Reset user password with token
+    // 4. Forgot Password
+    forgotPassword: builder.mutation({
+      query: (data) => ({
+        url: '/password/forgot',
+        method: 'POST',
+        body: data,
+      }),
+    }),
+
+    // 5. Reset Password 
     resetPassword: builder.mutation({
       query: ({ token, passwords }) => ({
         url: `/password/reset/${token}`,
-        method: 'POST', 
+        method: 'POST',
         body: passwords,
       }),
     }),
 
-    // 6. Fetch current authenticated user's profile
+    // 6. Get User Profile (Current Logged-in User)
     getProfile: builder.query({
       query: () => '/me',
-      providesTags: ['User'], 
+      providesTags: ['User'],
     }),
 
-    //7. Logout the current user and clear session (FIXED)
+    // 7. Update User Profile (Name, Avatar, etc.)
+    updateProfile: builder.mutation({
+      query: (updatedData) => ({
+        url: '/me/update',
+        method: 'PUT',
+        body: updatedData,
+      }),
+      invalidatesTags: ['User'], // Automatically invalidates user cache to trigger fresh refetching
+    }),
+
+    // 8. Logout User
     logoutUser: builder.mutation({
       query: () => ({
         url: '/logout',
-        method: 'GET', 
-      })
+        method: 'GET',
+      }),
+      invalidatesTags: ['User'],
     }),
+
   }),
 });
 
-// Export all auto-generated React hooks for components to use
-export const { 
-  useRegisterUserMutation, 
-  useVerifyEmailMutation, 
-  useLoginUserMutation, 
+export const {
+  useRegisterUserMutation,
+  useLoginUserMutation,
+  useVerifyEmailMutation,
   useForgotPasswordMutation,
-  useResetPasswordMutation, 
+  useResetPasswordMutation,
   useGetProfileQuery,
-  useLogoutUserMutation 
+  useUpdateProfileMutation,
+  useLogoutUserMutation,
 } = authApi;

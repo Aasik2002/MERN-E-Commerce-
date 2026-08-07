@@ -3,13 +3,14 @@ import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { User, Mail, Lock, ArrowRight, Cpu } from 'lucide-react';
 import { useRegisterUserMutation } from '../redux/api/authApi'; 
+import toast from 'react-hot-toast'; // 🌟 Added Toast notifications
 
 const Register = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   
-  // RTK Query register mutation hook (No changes here)
+  // RTK Query register mutation hook
   const [registerUser, { isLoading }] = useRegisterUserMutation();
   const navigate = useNavigate();
 
@@ -19,10 +20,17 @@ const Register = () => {
       const result = await registerUser({ name, email, password }).unwrap();
       
       if (result.success) {
+        toast.success(result.message || 'Registration successful! Please verify your email.', {
+          style: { background: '#0b1021', color: '#fff', border: '1px solid #1e293b' },
+        });
         navigate('/verify-email', { state: { email } });
       }
     } catch (err) {
       console.error("Registration Failed:", err);
+      // 🌟 Display backend error message safely
+      toast.error(err?.data?.message || 'Registration failed. Please try again.', {
+        style: { background: '#0b1021', color: '#fff', border: '1px solid #1e293b' },
+      });
     }
   };
 

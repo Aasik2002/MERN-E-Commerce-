@@ -16,6 +16,7 @@ import {
   resetPassword,
 } from "../controller/userController.js";
 import { Verifyuser, roleBasedAccess } from "../helper/userAuth.js";
+import upload from "../helper/multer.js"; // 🌟 1. Multer-ஐ இங்கு இம்போர்ட் செய்யவும்
 
 const router = express.Router();
 
@@ -33,7 +34,9 @@ router.route("/password/reset/:token").post(resetPassword);
 // User profile & settings routes
 router.route("/me").get(Verifyuser, getUserDetails);
 router.route("/password/update").put(Verifyuser, updatePassword);
-router.route("/me/update").put(Verifyuser, updateProfile);
+
+// 🌟 2. Update Profile Route-ல் upload.single("avatar") மிட்வேரை இணைக்கவும்
+router.route("/me/update").put(Verifyuser, upload.single("avatar"), updateProfile); 
 
 // Admin routes
 router.route("/admin/users").get(Verifyuser, roleBasedAccess("admin"), getAllUsers);
