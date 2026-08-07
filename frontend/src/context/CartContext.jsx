@@ -9,27 +9,41 @@ export const CartProvider = ({ children }) => {
     const savedCart = localStorage.getItem('nexDigitalCart');
     return savedCart ? JSON.parse(savedCart) : [];
   });
+
   useEffect(() => {
     localStorage.setItem('nexDigitalCart', JSON.stringify(cart));
   }, [cart]);
 
-  // 1. Add to Cart Function
+  // 1. Add to Cart Function (Updated to handle custom quantities and stock limits)
   const addToCart = (product) => {
     setCart((prevCart) => {
       const existingItem = prevCart.find((item) => item._id === product._id);
       
+      // Get the requested quantity (default is 1 if not specified)
+      const requestedQuantity = product.quantity || 1;
+
       if (existingItem) {
-        toast.success(`Increased quantity for ${product.name}`, {
-          style: { background: '#0b1021', color: '#fff', border: '1px solid #1e293b' },
-        });
+        // Calculate new quantity but ensure it doesn't exceed available stock
+        let newQuantity = existingItem.quantity + requestedQuantity;
+        if (product.stock && newQuantity > product.stock) {
+          newQuantity = product.stock;
+          toast.error(`Only ${product.stock} items available in stock`, {
+            style: { background: '#0b1021', color: '#fff', border: '1px solid #1e293b' },
+          });
+        } else {
+          toast.success(`Updated quantity for ${product.name}`, {
+            style: { background: '#0b1021', color: '#fff', border: '1px solid #1e293b' },
+          });
+        }
+
         return prevCart.map((item) =>
-          item._id === product._id ? { ...item, quantity: item.quantity + 1 } : item
+          item._id === product._id ? { ...item, quantity: newQuantity } : item
         );
       } else {
         toast.success(`${product.name} added to cart!`, {
           style: { background: '#0b1021', color: '#fff', border: '1px solid #1e293b' },
         });
-        return [...prevCart, { ...product, quantity: 1 }];
+        return [...prevCart, { ...product, quantity: requestedQuantity }];
       }
     });
   };
@@ -42,9 +56,17 @@ export const CartProvider = ({ children }) => {
     });
   };
 
-  // 3. Update Quantity Function
-  const updateQuantity = (productId, newQuantity) => {
+  // 3. Update Quantity Function (Ensures quantity is valid and within stock)
+  const updateQuantity = (productId, newQuantity, stock) => {
     if (newQuantity < 1) return;
+    
+    if (stock && newQuantity > stock) {
+      toast.error(`Maximum stock reached`, {
+        style: { background: '#0b1021', color: '#fff', border: '1px solid #1e293b' },
+      });
+      return;
+    }
+
     setCart((prevCart) =>
       prevCart.map((item) =>
         item._id === productId ? { ...item, quantity: newQuantity } : item
@@ -52,8 +74,14 @@ export const CartProvider = ({ children }) => {
     );
   };
 
+  // 4. Clear Cart (Useful for after a successful checkout)
+  const clearCart = () => {
+    setCart([]);
+    localStorage.removeItem('nexDigitalCart');
+  };
+
   return (
-    <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQuantity }}>
+    <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQuantity, clearCart }}>
       {children}
     </CartContext.Provider>
   );
