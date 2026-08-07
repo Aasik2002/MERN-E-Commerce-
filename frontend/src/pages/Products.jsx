@@ -1,20 +1,14 @@
 import { useState, useContext } from 'react';
-import { Search } from 'lucide-react';
+import { Search, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { CartContext } from '../context/CartContext'; 
+import { useGetAllProductsQuery } from '../redux/api/productApi'; // 🌟 RTK Query Import
 
 const Products = () => {
   const { addToCart } = useContext(CartContext);
   
-  const mockProducts = [
-    { _id: '1', name: 'Nexus ProBook 16', price: 1899, category: 'Laptops', image: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=600&q=80', description: 'High-performance mobile workstation engineered for creative professionals.', badge: 'NEW' },
-    { _id: '2', name: 'Aura Sonic NC', price: 349, category: 'Audio', image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=600&q=80', description: 'Studio-grade active noise cancellation with beryllium drivers.', badge: '' },
-    { _id: '3', name: 'OmniPhone 15 Ultra', price: 1199, category: 'Mobile', image: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=600&q=80', description: 'Titanium chassis, quantum-dot display, and next-gen computational...', badge: 'LIMITED' },
-    { _id: '4', name: 'AeroKeys Mech', price: 249, category: 'Accessories', image: 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&w=600&q=80', description: 'Tactile precision keyboard with aerospace-grade aluminum.', badge: '' }
-  ];
-
-  // Data State
-  const [products] = useState(mockProducts);
+  const { data, isLoading, isError } = useGetAllProductsQuery();
+  const products = data?.products || []; 
   
   // Filter States
   const [searchTerm, setSearchTerm] = useState('');
@@ -33,15 +27,43 @@ const Products = () => {
   const filteredProducts = products
     .filter(product => {
       const matchSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchCategory = selectedCategories.length === 0 || selectedCategories.includes(product.category);
+      
+      const categoryName = product.category?.name || product.category || '';
+      const matchCategory = selectedCategories.length === 0 || selectedCategories.includes(categoryName);
+      
       const matchPrice = product.price <= priceRange;
+      
       return matchSearch && matchCategory && matchPrice;
     })
     .sort((a, b) => {
       if (sortBy === 'price-low') return a.price - b.price;
       if (sortBy === 'price-high') return b.price - a.price;
-      return 0;
+      return 0; 
     });
+
+  //  Loading State Design
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#060913] flex flex-col items-center justify-center gap-4">
+        <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
+        <p className="text-slate-400 font-semibold tracking-widest text-sm animate-pulse">
+          INITIALIZING SECURE DATABANKS...
+        </p>
+      </div>
+    );
+  }
+
+  // Error State Design
+  if (isError) {
+    return (
+      <div className="min-h-screen bg-[#060913] flex items-center justify-center">
+        <div className="bg-red-900/20 border border-red-900/50 p-6 rounded-xl text-center space-y-3">
+          <h2 className="text-xl font-bold text-red-500">System Error</h2>
+          <p className="text-slate-400">Failed to load products from the database.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#060913] text-slate-200 pt-24 pb-16 px-4 sm:px-6 lg:px-8 font-sans">
@@ -126,32 +148,38 @@ const Products = () => {
               {filteredProducts.map((product) => (
                 <div key={product._id} className="bg-[#0b1021]/60 border border-slate-800/80 rounded-2xl p-4 flex flex-col group hover:border-slate-700 transition-all shadow-lg">
                   <div className="h-48 bg-slate-900 rounded-xl overflow-hidden relative mb-4">
-                    <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                    {product.badge && (
-                      <span className={`absolute top-2 left-2 px-2.5 py-1 rounded text-[10px] font-bold tracking-widest border backdrop-blur-md ${
-                        product.badge === 'LIMITED' ? 'bg-red-900/80 text-red-100 border-red-700/50' : 'bg-slate-900/80 text-white border-slate-700'
-                      }`}>
-                        {product.badge}
+                    <img 
+                      src={product.images && product.images.length > 0 ? product.images[0].url : 'https://via.placeholder.com/600'} 
+                      alt={product.name} 
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                    />
+                    {product.stock <= 0 ? (
+                      <span className="absolute top-2 left-2 px-2.5 py-1 rounded text-[10px] font-bold tracking-widest border backdrop-blur-md bg-red-900/80 text-red-100 border-red-700/50">
+                        OUT OF STOCK
                       </span>
-                    )}
+                    ) : product.stock < 5 ? (
+                      <span className="absolute top-2 left-2 px-2.5 py-1 rounded text-[10px] font-bold tracking-widest border backdrop-blur-md bg-orange-900/80 text-orange-100 border-orange-700/50">
+                        LIMITED
+                      </span>
+                    ) : null}
                   </div>
+
                   <div className="flex justify-between items-start mb-2">
-                    <h3 className="text-white font-bold text-base">{product.name}</h3>
-                    <span className="text-white font-bold text-base">${product.price}</span>
+                    <h3 className="text-white font-bold text-base truncate pr-2">{product.name}</h3>
+                    <span className="text-blue-400 font-bold text-base">${product.price}</span>
                   </div>
                   <p className="text-xs text-slate-400 line-clamp-2 mb-6 flex-grow">{product.description}</p>
                   
-                  <div className="flex gap-3">
+                  <div className="flex gap-3 mt-auto">
                     <Link to={`/product/${product._id}`} className="w-1/2 flex items-center justify-center py-2.5 rounded-lg border border-slate-700 text-sm font-semibold text-slate-300 hover:text-white hover:border-slate-500 transition-colors">
                       Details
                     </Link>
-                    
-                    {/* 🌟 4. உண்மையான addToCart ஃபங்ஷனை இங்கு அழைத்துள்ளோம் */}
                     <button 
                       onClick={() => addToCart(product)} 
-                      className="w-1/2 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-sm font-semibold text-white transition-colors shadow-lg shadow-blue-500/20"
+                      disabled={product.stock <= 0} 
+                      className="w-1/2 py-2.5 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-sm font-semibold text-white transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Add to Cart
+                      {product.stock <= 0 ? 'Unavailable' : 'Add to Cart'}
                     </button>
                   </div>
                 </div>

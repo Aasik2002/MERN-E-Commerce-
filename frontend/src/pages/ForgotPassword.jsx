@@ -2,37 +2,48 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Mail, ArrowLeft, Key, ArrowRight } from 'lucide-react';
-// import { useForgotPasswordMutation } from '../redux/api/authApi'; // உங்களது RTK Query Hook-ஐ இங்கு பயன்படுத்தவும்
+import { useForgotPasswordMutation } from '../redux/api/authApi';
+import toast from 'react-hot-toast';
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [isLoading, setIsLoading] = useState(false); // RTK Query பயன்படுத்தினால் இதை நீக்கிவிடலாம்
   
-  // const [forgotPassword, { isLoading }] = useForgotPasswordMutation(); // Backend Hook
+  // RTK Query Hook
+  const [forgotPassword, { isLoading }] = useForgotPasswordMutation(); 
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
     
+    if (!email) {
+      toast.error("Please enter your email address", { 
+        style: { background: '#0b1021', color: '#fff', border: '1px solid #1e293b' } 
+      });
+      return;
+    }
+
     try {
-      // Backend API-
-      // const result = await forgotPassword({ email }).unwrap();
+      // Backend API-க்கு Request அனுப்புதல்
+      const result = await forgotPassword({ email }).unwrap();
       
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      
-      setIsSubmitted(true);
+      if (result.success) {
+        toast.success(result.message || "Recovery link sent successfully!", { 
+          style: { background: '#0b1021', color: '#fff', border: '1px solid #1e293b' } 
+        });
+        setIsSubmitted(true); // வெற்றி பெற்றால் Success UI-ஐக் காட்டும்
+      }
     } catch (err) {
       console.error("Password Reset Request Failed:", err);
-    } finally {
-      setIsLoading(false);
+      toast.error(err?.data?.message || "User not found or Server error", { 
+        style: { background: '#0b1021', color: '#fff', border: '1px solid #1e293b' } 
+      });
     }
   };
 
   return (
     <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-[#060913] px-4 sm:px-6 lg:px-8 font-sans">
       
-      {/* 🌟 Background Decorative Glowing Blobs */}
+      {/* 🌟 Background Decorative Glowing Blobs (NexDigital Theme) */}
       <div className="absolute -top-40 -left-40 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute -bottom-40 -right-40 w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none" />
 
@@ -44,9 +55,10 @@ const ForgotPassword = () => {
         className="relative z-10 max-w-md w-full bg-[#0b1021]/80 backdrop-blur-xl border border-slate-800/80 p-8 sm:p-10 rounded-3xl shadow-2xl shadow-black/60 my-8"
       >
         {isSubmitted ? (
-          /* ================= SUCCESS STATE ================= */
+          /* ================= SUCCESS STATE UI ================= */
           <motion.div 
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
             className="text-center space-y-6"
           >
             <div className="mx-auto w-16 h-16 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center mb-4">
@@ -59,17 +71,22 @@ const ForgotPassword = () => {
               Please check your inbox and spam folder.
             </p>
             <div className="pt-4">
-              <Link to="/login" className="w-full flex items-center justify-center py-4 px-4 rounded-xl text-sm font-bold text-white bg-slate-900 border border-slate-800 hover:bg-slate-800 transition-all">
+              <Link 
+                to="/login" 
+                className="w-full flex items-center justify-center py-4 px-4 rounded-xl text-sm font-bold text-white bg-slate-900 border border-slate-800 hover:bg-slate-800 transition-all"
+              >
                 Return to Login
               </Link>
             </div>
           </motion.div>
         ) : (
-          /* ================= FORM STATE ================= */
+          /* ================= FORM STATE UI ================= */
           <>
             <div className="text-center space-y-4">
               <motion.div 
-                initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                initial={{ scale: 0 }} 
+                animate={{ scale: 1 }} 
+                transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
                 className="mx-auto w-14 h-14 rounded-2xl bg-[#060913] border border-slate-700/80 flex items-center justify-center shadow-inner mb-2 group"
               >
                 <Key className="h-7 w-7 text-blue-500 group-hover:text-blue-400 transition-colors transform group-hover:rotate-12" />

@@ -187,7 +187,8 @@ export const deleteallproduct = asyncHandler(async (req, res, next) => {
 // GET http://localhost:5000/api/v1/products
 // ============================================================
 export const getallproduct = asyncHandler(async (req, res, next) => {
-    const resultsPerPage = 4; // ✅ Show 4 products per page
+    // 🌟 FIXED: Changed from 4 to 50 so all your products load on the first page!
+    const resultsPerPage = 50; 
 
     // ✅ Step 1 - Apply search and filter
     const apihelper = new ApiHelper(Product.find().populate('category', 'name'), req.query)

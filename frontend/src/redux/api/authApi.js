@@ -4,7 +4,7 @@ export const authApi = createApi({
   reducerPath: 'authApi',
   // Configure the base URL for all authentication API requests
   baseQuery: fetchBaseQuery({ 
-    baseUrl: 'http://localhost:8000/api/v1', 
+    baseUrl: 'http://localhost:5000/api/v1', 
     credentials: 'include' // Ensures cookies/tokens are sent with requests
   }),
   tagTypes: ['User'], // Used for automated caching and refetching
@@ -39,24 +39,36 @@ export const authApi = createApi({
       invalidatesTags: ['User'], 
     }),
 
-    // 🌟 4. Initiate forgot password recovery process (NEWLY ADDED)
+    // 4. Initiate forgot password recovery process
     forgotPassword: builder.mutation({
       query: (emailData) => ({
         url: '/password/forgot',
         method: 'POST',
-        body: emailData, // Sends { email: "user@example.com" } to the backend
+        body: emailData,
       }),
     }),
 
-    // 5. Fetch current authenticated user's profile
-    getProfile: builder.query({
-      query: () => '/me',
-      providesTags: ['User'], // Provide cache tag for user data
+    // 5. Reset user password with token
+    resetPassword: builder.mutation({
+      query: ({ token, passwords }) => ({
+        url: `/password/reset/${token}`,
+        method: 'POST', 
+        body: passwords,
+      }),
     }),
 
-    // 6. Logout the current user and clear session
-    logoutUser: builder.query({
-      query: () => '/logout',
+    // 6. Fetch current authenticated user's profile
+    getProfile: builder.query({
+      query: () => '/me',
+      providesTags: ['User'], 
+    }),
+
+    //7. Logout the current user and clear session (FIXED)
+    logoutUser: builder.mutation({
+      query: () => ({
+        url: '/logout',
+        method: 'GET', 
+      })
     }),
   }),
 });
@@ -66,7 +78,8 @@ export const {
   useRegisterUserMutation, 
   useVerifyEmailMutation, 
   useLoginUserMutation, 
-  useForgotPasswordMutation, // 🌟 Exporting the newly added hook
+  useForgotPasswordMutation,
+  useResetPasswordMutation, 
   useGetProfileQuery,
-  useLazyLogoutUserQuery 
+  useLogoutUserMutation 
 } = authApi;

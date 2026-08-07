@@ -1,6 +1,6 @@
 import User from "../Models/userModel.js";
 import { getToken } from "../helper/jwtToken.js";
-import sendEmail from "../helper/sendEmail.js";
+import sendEmail from "../utils/sendEmail.js";
 import { AppError } from "../middleware/error.js";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
@@ -65,6 +65,7 @@ export const registerUser = async (req, res, next) => {
 
       return next(new AppError("Could not send verification email. Try again later.", 500));
     }
+    console.log("Frontend Data:", req.body);
   } catch (error) {
     next(error);
   }
